@@ -15,7 +15,7 @@ int rssi_previous = 0;
 int auto_rssi_pointer = 1;
 int auto_rssi_count = 0;
 
-#define PIN 0
+#define PIN 4
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -28,9 +28,12 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(2, PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("Booting...");
+  
   strip.begin();
   strip.setBrightness(200);
-  strip.show(); // Initialize all pixels to 'off'
+  strip_test(0);
+  strip_test(1);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -44,6 +47,20 @@ void setup() {
     Serial.println("WiFi connected");
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
+}
+
+void strip_test(int led_number) {
+  strip.setPixelColor(led_number, 255, 0, 0);
+  strip.show();
+  delay(100);
+  strip.setPixelColor(led_number, 0, 255, 0);
+  strip.show();
+  delay(100);
+  strip.setPixelColor(led_number, 0, 0, 255);
+  strip.show();
+  delay(100);
+  strip.setPixelColor(led_number, 0, 0, 0);
+  strip.show();
 }
 
 void breath() {
@@ -99,10 +116,11 @@ void loop() {
     
   }
 
-  delay(250);
+  delay(150);
 
 }
 
+//Converts rssi from a neg number, runs the auto_rssi_minmax, reverses the direction, scales on 0-255 
 int convert_rssi(int rssi_in) {
   int rssi_out = 0;
 
@@ -123,31 +141,31 @@ int convert_rssi(int rssi_in) {
 //Function to find highest (maximum) value in array
 int get_maximum(int input[])
 {
-     int len = auto_rssi_size;    // sizeof(input);  // establish size of array
-     int max_value = input[1];    // start with max = first element
+   int len = auto_rssi_size;    // sizeof(input);  // establish size of array
+   int max_value = input[1];    // start with max = first element
 
-     for(int i = 1; i<len; i++)
-     {
-          if(input[i] > max_value)
-                max_value = input[i];
-                
-     }
-     return max_value;                // return highest value in array
+   for(int i = 1; i<len; i++)
+   {
+      if(input[i] > max_value)
+            max_value = input[i];
+              
+   }
+   return max_value;                // return highest value in array
 }
 
 //Function to find lowest (minimum) value in array
 int get_minimum(int input[])
 {
-     int len = auto_rssi_size;    //sizeof(input);  // establish size of array
-     int min_value = input[1];    // start with min = first element
+   int len = auto_rssi_size;    //sizeof(input);  // establish size of array
+   int min_value = input[1];    // start with min = first element
 
-     for(int i = 1; i<len; i++)
-     {
-        if(min_value > input[i] && input[i] > 0)
-              min_value = input[i];     
-     }
-     
-     return min_value;    // return lowest value in array
+   for(int i = 1; i<len; i++)
+   {
+      if(min_value > input[i] && input[i] > 0)
+            min_value = input[i];     
+   }
+   
+   return min_value;    // return lowest value in array
 }
 
 //return the min and max given the current rssi
