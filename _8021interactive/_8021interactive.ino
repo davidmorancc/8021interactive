@@ -1,19 +1,16 @@
 #include <Adafruit_NeoPixel.h>
 #include "ESP8266WiFi.h"
 
-const char* ssid     = "commdat";
-const char* password = "0p3nm35h";
-int rssi_max  = 0;
-int rssi_min  = 100;
+const char* ssid        = "commdat";
+const char* password    = "0p3nm35h";
+int rssi_max            = 0;
+int rssi_min            = 0;
 
-int auto_rssi_size = 50;
+int auto_rssi_size      = 50;
 int auto_rssi[50];
-
-int auto_rssi_max_cur = 0;
-int auto_rssi_min_cur = 100;
-int rssi_previous = 0;
-int auto_rssi_pointer = 1;
-int auto_rssi_count = 0;
+int auto_rssi_padding   = 10;
+int rssi_previous       = 0;
+int auto_rssi_pointer   = 1;
 
 #define PIN 4
 
@@ -27,38 +24,42 @@ int auto_rssi_count = 0;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(2, PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
+  //setup serial port
   Serial.begin(115200);
   Serial.println("Booting...");
-  
+
+  //test the led strip
+  Serial.println("LED Test...");
   strip.begin();
   strip.setBrightness(200);
   strip_test(0);
   strip_test(1);
 
+  //Connect to the wifi
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  
+
+  Serial.print("Wifi Connecting");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
+  Serial.println("Connected");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
 }
 
+//basic led strip test
 void strip_test(int led_number) {
   strip.setPixelColor(led_number, 255, 0, 0);
   strip.show();
-  delay(100);
+  delay(200);
   strip.setPixelColor(led_number, 0, 255, 0);
   strip.show();
-  delay(100);
+  delay(200);
   strip.setPixelColor(led_number, 0, 0, 255);
   strip.show();
-  delay(100);
+  delay(200);
   strip.setPixelColor(led_number, 0, 0, 0);
   strip.show();
 }
@@ -71,7 +72,6 @@ void breath() {
   float MaximumBrightness = 200;
   float SpeedFactor = 0.007; // I don't actually know what would look good
   float StepDelay = 2; // ms for a step delay on the lights
-
   
   // Make the lights breathe
   for (int i = 0; i < 65535; i++) {
@@ -108,16 +108,10 @@ void loop() {
 
     rssi_previous = rssi;
     /* Testing */
-    Serial.println("-");
-    Serial.println(rssi_max);
-    Serial.println(rssi_min);
-    Serial.println(rssi);
-    Serial.println("-");
-    
+    Serial.println("Min/RSSI/Max " + String(rssi_min) + "-" +  String(rssi) + "-" + String(rssi_max));   
   }
 
   delay(150);
-
 }
 
 //Converts rssi from a neg number, runs the auto_rssi_minmax, reverses the direction, scales on 0-255 
@@ -147,8 +141,7 @@ int get_maximum(int input[])
    for(int i = 1; i<len; i++)
    {
       if(input[i] > max_value)
-            max_value = input[i];
-              
+            max_value = input[i];       
    }
    return max_value;                // return highest value in array
 }
@@ -164,7 +157,6 @@ int get_minimum(int input[])
       if(min_value > input[i] && input[i] > 0)
             min_value = input[i];     
    }
-   
    return min_value;    // return lowest value in array
 }
 
@@ -180,8 +172,8 @@ void auto_rssi_minmax(int rssi_in) {
   rssi_max = get_maximum(auto_rssi);
 
   //pads the min and max, gives a less sudden effects
-  if ((rssi_max-rssi_min)<10) {
-    rssi_diff = (10-(rssi_max-rssi_min))/2;
+  if ((rssi_max-rssi_min)<auto_rssi_padding) {
+    rssi_diff = (auto_rssi_padding-(rssi_max-rssi_min))/2;
     rssi_min = rssi_min - rssi_diff;
     rssi_max = rssi_max + rssi_diff;
   }
@@ -193,11 +185,6 @@ void auto_rssi_minmax(int rssi_in) {
     auto_rssi_pointer++;
   }
   
-  /* Testing */
-  /* Serial.println("-");
-  Serial.println(rssi_max);
-  Serial.println(rssi_min);
-  Serial.println("-");*/
 }
 
 
