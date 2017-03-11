@@ -1,14 +1,15 @@
 #include <Adafruit_NeoPixel.h>
 #include "ESP8266WiFi.h"
+#include <WiFiUdp.h>
 
 const char* ssid        = "commdat";
 const char* password    = "0p3nm35h";
 int rssi_max            = 0;
 int rssi_min            = 0;
 
-int auto_rssi_size      = 50;
-int auto_rssi[50];
-int auto_rssi_padding   = 10;
+int auto_rssi_size      = 100;
+int auto_rssi[100];
+int auto_rssi_padding   = 6;
 int rssi_previous       = 0;
 int auto_rssi_pointer   = 1;
 
@@ -23,6 +24,8 @@ int auto_rssi_pointer   = 1;
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(2, PIN, NEO_GRB + NEO_KHZ800);
 
+WiFiUDP Udp;
+
 void setup() {
   //setup serial port
   Serial.begin(115200);
@@ -31,8 +34,7 @@ void setup() {
   //test the led strip
   Serial.println("LED Test...");
   strip.begin();
-  strip.setBrightness(200);
-  strip_test(0);
+  strip.setBrightness(150);
   strip_test(1);
 
   //Connect to the wifi
@@ -50,18 +52,20 @@ void setup() {
 }
 
 //basic led strip test
-void strip_test(int led_number) {
-  strip.setPixelColor(led_number, 255, 0, 0);
-  strip.show();
-  delay(200);
-  strip.setPixelColor(led_number, 0, 255, 0);
-  strip.show();
-  delay(200);
-  strip.setPixelColor(led_number, 0, 0, 255);
-  strip.show();
-  delay(200);
-  strip.setPixelColor(led_number, 0, 0, 0);
-  strip.show();
+void strip_test(int number_leds) {
+  for (int i = 0; i < number_leds; i++) {
+    strip.setPixelColor(number_leds, 255, 0, 0);
+    strip.show();
+    delay(200);
+    strip.setPixelColor(number_leds, 0, 255, 0);
+    strip.show();
+    delay(200);
+    strip.setPixelColor(number_leds, 0, 0, 255);
+    strip.show();
+    delay(200);
+    strip.setPixelColor(number_leds, 0, 0, 0);
+    strip.show();
+  }
 }
 
 void breath() {
@@ -92,25 +96,43 @@ void breath() {
   }
 }
 
+//sends a udp packet and returns the rssi
+int get_rssi() {
+  int rssi = 0;
+  
+  //sends a packet before reading the rssi
+  //I think the rssi function uses a recent packet to get signal, this keeps it updating faster
+  Udp.beginPacket('255.255.255.255', '1234');
+  Udp.write('test');
+  Udp.endPacket();
+  
+  //get the strenght of the current network
+  rssi = WiFi.RSSI();
+
+  return rssi;
+}
+
 void loop() {
 
   int rssi = 0;
-
+  int rssi_in = 0;
+  
   //get the strenght of the current network
-  rssi = convert_rssi(WiFi.RSSI());
-
+  rssi_in = get_rssi();
+  rssi = convert_rssi(rssi_in);
+  
   //only update the strip if there's a change
   if (rssi != rssi_previous) {
     //strip.setBrightness(rssi);
-    strip.setPixelColor(0, 155, 0, rssi);
-    strip.setPixelColor(1, 155, 0, rssi);
+    strip.setPixelColor(0, rssi, 0, rssi);
+    strip.setPixelColor(1, rssi, 0, rssi);
+    
     strip.show(); 
 
     rssi_previous = rssi;
     /* Testing */
-    Serial.println("Min/RSSI/Max " + String(rssi_min) + "-" +  String(rssi) + "-" + String(rssi_max));   
+    Serial.println("Min/RSSI/Max//Convert " + String(rssi_min) + "/" +  String(abs(rssi_in)) + "/" + String(rssi_max) + "//" +  String(rssi));   
   }
-
   delay(150);
 }
 
